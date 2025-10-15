@@ -33,8 +33,7 @@ These data match the structure and format of the real dataset but contain **no r
 - **`data/8concepts_movie_label.npy`** — real label array used for training and evaluation  
 
 ### Download
-All simulated data can be downloaded from the following Google Drive link:  
-🔗 [Drive](https://drive.google.com/drive/folders/10fumXuPgnnqy0GPoEdtVHGdQvKqYik04?usp=sharing)
+All simulated data can be downloaded from the following Google Drive link: 🔗 [Drive](https://drive.google.com/drive/folders/10fumXuPgnnqy0GPoEdtVHGdQvKqYik04?usp=sharing)
 
 ### Running the demo
 Run the following commands to execute the end-to-end example:
