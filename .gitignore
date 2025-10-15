@@ -22,6 +22,8 @@ wandb/
 results/
 data/
 figures/
+*.xlsx
+*.xls
 
 # Jupyter notebook outputs
 *.ipynb
