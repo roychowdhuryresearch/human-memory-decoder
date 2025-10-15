@@ -6,6 +6,7 @@ import os
 data_versions = 'simulated'
 model_version = 'CSA6_CCA6_384_H6'
 epoch = '49'
+lesion = 'Full' 
                               
 def load_participant_data(participant, data_version): 
     """Load data for a single participant and model version"""
@@ -16,7 +17,7 @@ def load_participant_data(participant, data_version):
     participant_cr = '0' if participant in ['p1', 'p2'] else '1'
     
     # FR1
-    file = f'results/{model_version}/{participant}_clusterless_transformer_Full/memory/{data_version}/epoch{epoch}_FR1_{participant_cr}/AUC.csv'
+    file = f'results/{model_version}/{participant}_clusterless_transformer_{lesion}/memory/{data_version}/epoch{epoch}_FR1_{participant_cr}/AUC.csv'
     if os.path.exists(file):
         df = pd.read_csv(file)
         df['p_value'] = df['p_value'].str.strip('()').apply(pd.to_numeric, errors='coerce')
@@ -24,7 +25,7 @@ def load_participant_data(participant, data_version):
         n_r1 = list(df['n_vocalizations'])
     
     # FR2
-    file = f'results/{model_version}/{participant}_clusterless_transformer_Full/memory/{data_version}/epoch{epoch}_FR2_{participant_cr}/AUC.csv'
+    file = f'results/{model_version}/{participant}_clusterless_transformer_{lesion}/memory/{data_version}/epoch{epoch}_FR2_{participant_cr}/AUC.csv'
     if os.path.exists(file):
         df = pd.read_csv(file)
         df['p_value'] = df['p_value'].str.strip('()').apply(pd.to_numeric, errors='coerce')
