@@ -18,6 +18,8 @@ Clone the repository and install the required dependencies:
 ```bash
 git clone https://github.com/roychowdhuryresearch/human-memory-decoder.git
 cd human-memory-decoder
+conda create -n human-memory-decoder python=3.10 -y
+conda activate human-memory-decoder
 pip install -r requirements.txt
 ```
 
