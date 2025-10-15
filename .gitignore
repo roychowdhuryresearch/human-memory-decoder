@@ -18,6 +18,11 @@ venv.bak/
 # Weights & Biases
 wandb/
 
+# Files
+results/
+data/
+figures/
+
 # Jupyter notebook outputs
 *.ipynb
 
