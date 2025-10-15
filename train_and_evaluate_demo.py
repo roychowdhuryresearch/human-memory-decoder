@@ -33,8 +33,8 @@ def create_configs():
 
     base_config = {
         # 'seed': 42,
-        'device': 'cuda:3',
-        'model_aggregate_type': 'mean2',
+        'device': 'cuda:0',
+        'model_aggregate_type': 'mean',
         'use_augment': False,
         'use_long_input': False,
         'use_shuffle_diagnostic': False,
@@ -64,8 +64,8 @@ def create_configs():
 
     # Define variations for different parameters
     variations = {
-        'lesion': ['MTL', 'HPC', 'FC'],
-        'lesion_mode': ['without'],
+        'lesion': ['Full', 'MTL', 'HPC', 'FC'],
+        'lesion_mode': ['only', 'without'],
     }
 
     # Generate all combinations
@@ -168,7 +168,7 @@ def get_model_flags(data_type):
     else:
         raise ValueError(f"Unknown data_type: {data_type}")
 
-def perform_memory_test(config, phase='recall1', alongwith=[], save_predictions=False):
+def perform_memory_test(config, phase='recall1', alongwith=[], save_predictions=False, window_search=False):
     """Run memory tests on trained model."""
     # Get model flags and paths first
     use_clusterless, use_lfp, use_combined, model_architecture = get_model_flags(config['data_type'])
@@ -330,16 +330,6 @@ def perform_memory_test(config, phase='recall1', alongwith=[], save_predictions=
     if save_predictions:
         np.save(os.path.join(save_path, 'free_recall_predictions.npy'), predictions_all)
 
-    # window_size, start, end, step_size = 4, -12, 12, 1
-    # windows = [[i, i + window_size] for i in range(start, end - window_size + 1, step_size)]
-    # # windows = [[-4, 0]]
-    # for window in windows:
-    #     window_name = str((window[0] + window[1]) // 2)
-    #     save_path = os.path.join(root_path, 'results', version, 
-    #                         f"{config['patient']}_{config['data_type']}_{model_architecture}_{suffix}",
-    #                         'memory', config['data_version'], f'epoch{config["epoch"]}_{phase}_{len(alongwith)}', window_name)
-    #     os.makedirs(save_path, exist_ok=True)
-
     method_MCS(
         smoothed_data, config['patient'], phase, save_path,
         use_clusterless=args['use_spike'],
@@ -347,19 +337,38 @@ def perform_memory_test(config, phase='recall1', alongwith=[], save_predictions=
         use_combined=args['use_combined'],
         alongwith=alongwith,
         predictions_length=predictions_length,
-        # window=window
     )
+
+    if window_search:
+        window_size, start, end, step_size = 4, -11, 7, 1
+        windows = [[i, i + window_size] for i in range(start, end - window_size + 1, step_size)]
+        for window in windows:
+            window_name = str((window[0] + window[1]) // 2)
+            save_path_window = os.path.join(root_path, 'results', version, 
+                                f"{config['patient']}_{config['data_type']}_{model_architecture}_{suffix}",
+                                'memory', config['data_version'], f'epoch{config["epoch"]}_{phase}_{len(alongwith)}', window_name)
+            os.makedirs(save_path_window, exist_ok=True)
+            method_MCS(
+                smoothed_data, config['patient'], phase, save_path_window,
+                use_clusterless=args['use_spike'],
+                use_lfp=args['use_lfp'],
+                use_combined=args['use_combined'],
+                alongwith=alongwith,
+                predictions_length=predictions_length,
+                window=window
+            )
+
     # method_heatmap(predictions, config['patient'], phase, save_path)
 
     # Figure 2c
-    # method_curve_shape(
-    #     smoothed_data, config['patient'], phase, save_path,
-    #     use_clusterless=args['use_spike'],
-    #     use_lfp=args['use_lfp'],
-    #     use_combined=args['use_combined'],
-    #     alongwith=alongwith,
-    #     predictions_length=predictions_length
-    # )
+    method_curve_shape(
+        smoothed_data, config['patient'], phase, save_path,
+        use_clusterless=args['use_spike'],
+        use_lfp=args['use_lfp'],
+        use_combined=args['use_combined'],
+        alongwith=alongwith,
+        predictions_length=predictions_length
+    )
 
     # method_curve_shape_all(
     #     smoothed_data, config['patient'], phase, save_path,
@@ -426,11 +435,21 @@ def main():
 
     for arch_key, configs in arch_groups.items():
         print(f"\nProcessing architecture: CSA={arch_key[0]}, CCA={arch_key[1]}, Hidden={arch_key[2]}, Heads={arch_key[3]}")
-        # Build a dict: lesion_type -> list of configs (one per patient), and keep patient list per lesion
-        lesion_dict = {'Full': [], 'MTL': [], 'FC': [], 'HPC': []}
-        patients_per_lesion = {'Full': [], 'MTL': [], 'FC': [], 'HPC': []}
+        lesion_dict = {
+            'Full': [],
+            'only_MTL': [], 'only_HPC': [], 'only_FC': [],
+            'without_MTL': [], 'without_HPC': [], 'without_FC': []
+        }
+        patients_per_lesion = {
+            'Full': [],
+            'only_MTL': [], 'only_HPC': [], 'only_FC': [],
+            'without_MTL': [], 'without_HPC': [], 'without_FC': []
+        }
         for config in configs:
-            lesion_key = config['lesion'] if config['lesion'] else 'Full'
+            if config['lesion'] == 'Full':
+                lesion_key = 'Full'
+            else:
+                lesion_key = f"{config['lesion_mode']}_{config['lesion']}"
             if lesion_key in lesion_dict:
                 # Apply patient_exclusions for this config
                 excluded = []
@@ -444,12 +463,10 @@ def main():
                         if patient not in patients_per_lesion[lesion_key]:
                             patients_per_lesion[lesion_key].append(patient)
 
-        # 1. Train all patients for each lesion type
-        for lesion in ['Full', 'MTL', 'FC', 'HPC']:
+        # 1. Train all patients for each lesion combination
+        for lesion in ['Full', 'only_MTL', 'only_FC', 'without_MTL', 'without_HPC', 'without_FC']:
             print(f"\nTraining all patients for lesion={lesion}...")
             for config in lesion_dict[lesion]:
-                # For 'Full', always use '_Full' as the suffix
-                # For MTL/FC, use _{lesion_mode}_{lesion} (e.g., _only_MTL, _without_FC)
                 lesion_suffix = get_lesion_suffix(config["lesion"], config["lesion_mode"])
                 suffix = lesion_suffix
                 version = get_version_string(config['num_csa_layers'], config['num_cca_layers'], config['hidden_size'], config['num_attention_heads'])
@@ -460,8 +477,26 @@ def main():
                 trainer = pipeline(args)
                 trainer.train(args['epochs'], 1)
                 
-        # 2. Test all patients for each lesion type, all epochs, both data versions
-        for lesion in ['Full', 'MTL', 'FC', 'HPC']:
+        # 2. Test all patients for each Only lesion combination, window_search=True for figure 3c
+        for lesion in ['Full', 'only_MTL', 'only_FC']:
+            print(f"\nTesting all patients for lesion={lesion}...")
+            for config in lesion_dict[lesion]:
+                for data_version in ['simulated']:
+                    for epoch in config['save_epochs']:
+                        test_config = config.copy()
+                        test_config['data_version'] = data_version
+                        test_config['epoch'] = epoch
+                        test_config['patient'] = config['patient']
+                        print(f"Testing model for patient {config['patient']}, lesion={lesion}, data_version={data_version}, epoch={epoch}...")
+                        if config['patient'] in ['p1', 'p2']:
+                            perform_memory_test(test_config, phase='FR1', save_predictions=True, window_search=True)
+                            perform_memory_test(test_config, phase='FR2', save_predictions=True, window_search=True)
+                        else:
+                            perform_memory_test(test_config, phase='FR1', alongwith=['CR1'], save_predictions=True, window_search=True)
+                            perform_memory_test(test_config, phase='FR2', alongwith=['CR2'], save_predictions=True, window_search=True)
+
+        # 3. Test all patients for each Without lesion combination
+        for lesion in ['without_MTL', 'without_HPC', 'without_FC']:
             print(f"\nTesting all patients for lesion={lesion}...")
             for config in lesion_dict[lesion]:
                 for data_version in ['simulated']:

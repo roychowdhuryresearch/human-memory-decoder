@@ -79,7 +79,7 @@ def method_heatmap(predictions, patient, phase, save_path):
     plt.savefig(file_path)
     plt.close()
 
-def method_MCS(predictions, patient, phase, save_path, use_clusterless=False, use_lfp=False, use_combined=False, alongwith=[], predictions_length={}):
+def method_MCS(predictions, patient, phase, save_path, use_clusterless=False, use_lfp=False, use_combined=False, alongwith=[], predictions_length={}, window=[-4, 0]):
     """Generate Soraya's method visualization - speed optimized version with identical logic."""
     result_df = pd.DataFrame()
     min_vocalizations = 2
@@ -150,7 +150,7 @@ def method_MCS(predictions, patient, phase, save_path, use_clusterless=False, us
         "n_permutations": 1500,
     }
     
-    activations = predictions
+    activations = np.roll(predictions, shift=-window[-1] * 4, axis=0)
     n_permutations = analysis_params['n_permutations']
     bin_size = analysis_params['bin_size']
     win_range_sec = analysis_params['win_range_sec']

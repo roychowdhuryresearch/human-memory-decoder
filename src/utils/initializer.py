@@ -1,6 +1,6 @@
 from src.dataloader.movie import *
 from src.dataloader.free_recall import *
-from src.models.multichannel_encoder_vit_mean2 import MultiEncoder as MultiEncoderViTMean2
+from src.models.multichannel_encoder_vit_mean import MultiEncoder as MultiEncoderViTMean
 from src.models.multichannel_encoder_vit_mean_logistic import PureLogisticRegression as MultiEncoderViTMeanLogistic
 from src.models.multichannel_encoder_vit_mean_lfp import MultiEncoder as MultiEncoderViTMeanLFP
 from src.utils.evaluator import Evaluator
@@ -114,8 +114,8 @@ def initialize_model(config):
             }
             configuration = ViTConfig(**cfg)
             # spike_model = ViTForImageClassification(configuration)
-            if config['model_aggregate_type'] == 'mean2':
-                spike_model = MultiEncoderViTMean2(configuration)
+            if config['model_aggregate_type'] == 'mean':
+                spike_model = MultiEncoderViTMean(configuration)
             elif config['model_aggregate_type'] == 'logistic':
                 spike_model = MultiEncoderViTMeanLogistic(configuration)
             elif config['model_aggregate_type'] == 'lfp':
